@@ -4,7 +4,7 @@ This document provides comprehensive API documentation for integrating with the 
 
 ## Base URL
 ```
-https://your-server-domain.com/iframe
+https://inrapi.web5lab.net/iframe
 ```
 
 ## Authentication
