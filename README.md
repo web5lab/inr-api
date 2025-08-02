@@ -2,6 +2,8 @@
 
 This document provides comprehensive API documentation for integrating with the INR Payment system. You can use these APIs to build your own custom UI instead of using the provided iframe.
 
+**Note**: The system now uses webhook callbacks to notify your application about payment events. See the [Webhook Integration](#webhook-integration) section for details.
+
 ## Base URL
 ```
 https://inrapi.web5lab.net/iframe
@@ -17,6 +19,7 @@ No authentication required for iframe APIs. All endpoints are public.
 2. [Deposits](#deposits)
 3. [Withdrawals](#withdrawals)
 4. [Transactions](#transactions)
+5. [Webhook Integration](#webhook-integration)
 
 ---
 
@@ -540,3 +543,256 @@ const fetchTransactions = async (email, phone, filters = {}) => {
 ## 📞 Support
 
 For technical support or questions about the API, please contact the development team or refer to the main project documentation.
+
+---
+
+## 🔗 Webhook Integration
+
+The INR Payment system automatically sends webhook notifications to your configured callback URL for all payment events. This allows your application to receive real-time updates about payment status changes.
+
+### Setting Up Webhooks
+
+1. **Configure Callback URL**: In the admin dashboard, go to "Callback Config" and enter your webhook endpoint URL
+2. **Set Secret Key**: Configure a secret key for webhook signature verification
+3. **Choose Events**: Select which events you want to receive notifications for
+4. **Test Endpoint**: Use the test function to verify your webhook endpoint is working
+
+### Webhook Events
+
+The system sends webhooks for these events:
+
+| Event | Description | Triggered When |
+|-------|-------------|----------------|
+| `depositCreated` | New deposit request | User submits deposit via iframe |
+| `depositApproved` | Deposit approved | Admin approves deposit request |
+| `depositRejected` | Deposit rejected | Admin rejects deposit request |
+| `withdrawalCreated` | New withdrawal request | User submits withdrawal via iframe |
+| `withdrawalApproved` | Withdrawal approved | Admin approves withdrawal request |
+| `withdrawalRejected` | Withdrawal rejected | Admin rejects withdrawal request |
+
+### Webhook Payload Structure
+
+All webhooks follow this structure:
+
+```json
+{
+  "event": "depositCreated",
+  "timestamp": "2024-01-20T10:30:00.000Z",
+  "data": {
+    // Event-specific data (see examples below)
+  },
+  "signature": "hmac_sha256_signature"
+}
+```
+
+### Event-Specific Payloads
+
+#### Deposit Events
+```json
+{
+  "event": "depositCreated",
+  "timestamp": "2024-01-20T10:30:00.000Z",
+  "data": {
+    "transactionId": "TXN123456789",
+    "amount": 5000,
+    "customerEmail": "user@example.com",
+    "customerName": "John Doe",
+    "paymentMethod": "PhonePe Business",
+    "status": "pending",
+    "screenshot": "https://your-server.com/uploads/screenshot.jpg",
+    "createdAt": "2024-01-20T10:30:00.000Z"
+  },
+  "signature": "abc123..."
+}
+```
+
+#### Deposit Approval/Rejection
+```json
+{
+  "event": "depositApproved",
+  "timestamp": "2024-01-20T11:00:00.000Z",
+  "data": {
+    "transactionId": "TXN123456789",
+    "amount": 5000,
+    "customerEmail": "user@example.com",
+    "customerName": "John Doe",
+    "paymentMethod": "PhonePe Business",
+    "status": "approved",
+    "remarks": "Verified and approved",
+    "processedBy": "Admin User",
+    "processedAt": "2024-01-20T11:00:00.000Z"
+  },
+  "signature": "def456..."
+}
+```
+
+#### Withdrawal Events
+```json
+{
+  "event": "withdrawalCreated",
+  "timestamp": "2024-01-20T12:00:00.000Z",
+  "data": {
+    "requestId": "WR1642678901ABCDE",
+    "amount": 2000,
+    "customerEmail": "user@example.com",
+    "customerName": "John Doe",
+    "withdrawalMethod": "UPI",
+    "accountDetails": {
+      "upiId": "user@paytm"
+    },
+    "status": "pending",
+    "createdAt": "2024-01-20T12:00:00.000Z"
+  },
+  "signature": "ghi789..."
+}
+```
+
+#### Withdrawal Approval/Rejection
+```json
+{
+  "event": "withdrawalApproved",
+  "timestamp": "2024-01-20T13:00:00.000Z",
+  "data": {
+    "requestId": "WR1642678901ABCDE",
+    "transactionId": "TXN987654321",
+    "amount": 2000,
+    "customerEmail": "user@example.com",
+    "customerName": "John Doe",
+    "withdrawalMethod": "UPI",
+    "accountDetails": {
+      "upiId": "user@paytm"
+    },
+    "status": "approved",
+    "remarks": "Processed successfully",
+    "processedBy": "Admin User",
+    "processedAt": "2024-01-20T13:00:00.000Z"
+  },
+  "signature": "jkl012..."
+}
+```
+
+### Webhook Signature Verification
+
+**Important**: Always verify webhook signatures to ensure authenticity.
+
+#### Node.js Example
+```javascript
+const crypto = require('crypto');
+const express = require('express');
+const app = express();
+
+app.use(express.json());
+
+const WEBHOOK_SECRET = 'your_secret_key_from_admin_panel';
+
+function verifyWebhookSignature(payload, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(payload))
+    .digest('hex');
+  
+  return signature === expectedSignature;
+}
+
+app.post('/api/payment-callback', (req, res) => {
+  const { event, timestamp, data, signature } = req.body;
+  
+  // Verify signature
+  if (!verifyWebhookSignature(data, signature, WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  // Process the webhook
+  console.log(`Received ${event} event:`, data);
+  
+  switch (event) {
+    case 'depositCreated':
+      // Handle new deposit
+      handleNewDeposit(data);
+      break;
+      
+    case 'depositApproved':
+      // Handle deposit approval
+      handleDepositApproval(data);
+      break;
+      
+    case 'withdrawalCreated':
+      // Handle new withdrawal
+      handleNewWithdrawal(data);
+      break;
+      
+    // ... handle other events
+  }
+  
+  res.status(200).json({ received: true });
+});
+
+function handleNewDeposit(data) {
+  // Update user balance (pending)
+  // Send notification to user
+  // Log transaction
+}
+
+function handleDepositApproval(data) {
+  // Update user balance (confirmed)
+  // Send confirmation notification
+  // Update transaction status
+}
+```
+
+#### PHP Example
+```php
+<?php
+$webhookSecret = 'your_secret_key_from_admin_panel';
+$payload = file_get_contents('php://input');
+$data = json_decode($payload, true);
+
+// Verify signature
+$expectedSignature = hash_hmac('sha256', json_encode($data['data']), $webhookSecret);
+if ($data['signature'] !== $expectedSignature) {
+    http_response_code(401);
+    exit('Invalid signature');
+}
+
+// Process webhook
+switch ($data['event']) {
+    case 'depositCreated':
+        handleNewDeposit($data['data']);
+        break;
+    case 'depositApproved':
+        handleDepositApproval($data['data']);
+        break;
+    // ... handle other events
+}
+
+http_response_code(200);
+echo json_encode(['received' => true]);
+?>
+```
+
+### Best Practices
+
+1. **Always verify signatures** to ensure webhook authenticity
+2. **Handle idempotency** - you might receive the same webhook multiple times
+3. **Respond quickly** - return HTTP 200 within 10 seconds
+4. **Log webhook events** for debugging and monitoring
+5. **Handle failures gracefully** - implement retry logic if needed
+6. **Use HTTPS** for your webhook endpoint for security
+
+### Testing Webhooks
+
+Use the "Test Callback" feature in the admin dashboard to:
+- Verify your webhook endpoint is accessible
+- Test signature verification
+- Debug payload handling
+- Monitor webhook delivery success/failure rates
+
+### Webhook Delivery
+
+- **Timeout**: 10 seconds
+- **Retry Policy**: Currently no automatic retries (implement your own if needed)
+- **Expected Response**: HTTP 200 status code
+- **Content-Type**: `application/json`
+- **Headers**: 
+  - `X-Callback-Event`: Event type
+  - `X-Callback-Signature`: HMAC signature
