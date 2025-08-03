@@ -137,6 +137,7 @@ curl -X POST "https://your-server.com/iframe/deposits" \
   -F "amount=5000" \
   -F "paymentMethod=PhonePe Business" \
   -F "transactionId=TXN123456789" \
+  -F "uid=UID123456789" \
   -F "screenshot=@payment_screenshot.jpg"
 ```
 
@@ -150,6 +151,7 @@ curl -X POST "https://your-server.com/iframe/deposits" \
     "amount": 5000,
     "paymentMethod": "PhonePe Business",
     "customerName": "Shiva",
+    "uid":"uid123",
     "customerEmail": "helloshiva0801@gmail.com",
     "customerPhone": "1234567890",
     "transactionId": "TXN123456789",
@@ -202,6 +204,7 @@ curl "https://your-server.com/iframe/deposits?email=user@example.com"
       "amount": 5000,
       "paymentMethod": "PhonePe Business",
       "customerName": "Shiva",
+      "uid":"UID123"
       "customerEmail": "helloshiva0801@gmail.com",
       "customerPhone": "1234567890",
       "transactionId": "TXN123456789",
@@ -235,6 +238,7 @@ Submit a new withdrawal request.
   "customerEmail": "john@example.com",
   "customerPhone": "+91 9876543210",
   "withdrawalMethod": "UPI",
+  "uid":"uid123",
   "accountDetails": {
     "upiId": "john@paytm"
   }
@@ -249,6 +253,7 @@ Submit a new withdrawal request.
   "customerEmail": "john@example.com",
   "customerPhone": "+91 9876543210",
   "withdrawalMethod": "Bank Transfer",
+  "uid":"uid123",
   "accountDetails": {
     "accountNumber": "1234567890",
     "ifscCode": "HDFC0001234",
@@ -270,6 +275,7 @@ Submit a new withdrawal request.
     "customerEmail": "john@example.com",
     "customerPhone": "+91 9876543210",
     "withdrawalMethod": "UPI",
+    "uid":"uid123",
     "accountDetails": {
       "upiId": "john@paytm"
     },
@@ -308,6 +314,7 @@ curl "https://your-server.com/iframe/withdrawals?email=john@example.com"
       "customerEmail": "john@example.com",
       "customerPhone": "+91 9876543210",
       "withdrawalMethod": "UPI",
+      "uid":"uid123",
       "accountDetails": {
         "upiId": "john@paytm"
       },
